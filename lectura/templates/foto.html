@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    /* Estilos para el encabezado */
+    h1 {
+        text-align: center;
+        font-size: 2rem;
+        color: #EAEAEA; /* Texto claro */
+        margin-bottom: 20px;
+    }
+
+    /* Contenedor principal */
+    #content {
+        text-align: center;
+        margin: 20px auto;
+    }
+
+    /* Botón de Volver al Inicio */
+    .back-button {
+        display: inline-block;
+        padding: 15px 30px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #FFFFFF; /* Texto blanco */
+        background-color: #2A9D8F; /* Verde vibrante */
+        border: none;
+        border-radius: 10px;
+        text-decoration: none;
+        cursor: pointer;
+        margin-top: 20px;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    .back-button:hover {
+        background-color: #21867A; /* Verde oscuro */
+        transform: scale(1.05); /* Efecto de agrandamiento */
+    }
+
+    .back-button:active {
+        background-color: #1B5F5B; /* Verde más oscuro */
+    }
+
+    /* Botón de Descargar Audio */
+    .download-btn {
+        display: inline-block;
+        padding: 15px 30px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        color: #FFFFFF; /* Texto blanco */
+        background-color: #F4A261; /* Naranja vibrante */
+        border: none;
+        border-radius: 10px;
+        text-decoration: none;
+        cursor: pointer;
+        margin-top: 20px;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    .download-btn:hover {
+        background-color: #E76F51; /* Rojo suave */
+        transform: scale(1.05); /* Efecto de agrandamiento */
+    }
+
+    .download-btn:active {
+        background-color: #D62828; /* Rojo más oscuro */
+    }
+
+    /* Reproductor de Audio */
+    audio {
+        outline: none;
+        width: 100%;
+        max-width: 400px;
+        margin: 20px auto;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    audio::-webkit-media-controls-panel {
+        background-color: #1A1A2E; /* Fondo oscuro */
+        color: #EAEAEA; /* Texto claro */
+        border-radius: 10px;
+    }
+
+    audio::-webkit-media-controls-play-button,
+    audio::-webkit-media-controls-timeline,
+    audio::-webkit-media-controls-current-time-display,
+    audio::-webkit-media-controls-time-remaining-display {
+        color: #EAEAEA; /* Color de los íconos y texto */
+    }
+</style>
+
+<div id="content">
+    <h1>Foto Subida</h1>
+
+    {% if mensaje %}
+        <p style="color: {% if audio_url %} #2A9D8F {% else %} #E94560 {% endif %}; 
+                  font-weight: bold; margin-bottom: 20px;">
+            {{ mensaje }}
+        </p>
+    {% endif %}
+
+    {% if photo_url %}
+        <img src="{{ photo_url }}" alt="Foto subida" style="max-width: 100%; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
+        
+        {% if audio_url %}
+            <!-- Reproductor de audio -->
+            <h2 style="color: #EAEAEA; margin-top: 20px;">Audio generado:</h2>
+            <audio controls>
+                <source src="{{ audio_url }}" type="audio/mpeg">
+                Tu navegador no soporta el reproductor de audio.
+            </audio>
+            <br>
+            <a href="{{ audio_url }}" download class="download-btn">Descargar audio</a>
+        {% endif %}
+    {% endif %}
+
+    <!-- Botón de Volver al Inicio -->
+    <a href="/" class="back-button">Volver al inicio</a>
+</div>
+{% endblock %}

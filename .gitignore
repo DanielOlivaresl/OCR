@@ -1,0 +1,24 @@
+# Archivos bytecode de Python
+__pycache__/
+*.py[cod]
+
+# Archivos de base de datos
+db.sqlite3
+
+# Archivos de migración innecesarios (si los generas localmente)
+*.sqlite3
+*.log
+
+# Archivos de medios (subidas de usuarios, etc.)
+media/
+
+# Entornos virtuales (por si los creas dentro del proyecto)
+venv/
+.env/
+.env.*
+
+# Archivos de configuración del sistema operativo o IDE
+.DS_Store
+*.swp
+.idea/
+.vscode/

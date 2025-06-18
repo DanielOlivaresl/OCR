@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+
+.btn-capture {
+        display: inline-block;
+        padding: 15px 30px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #FFFFFF; /* Texto blanco */
+        background-color: #2A9D8F; /* Verde vibrante */
+        border: none;
+        border-radius: 10px;
+        text-decoration: none;
+        cursor: pointer;
+        margin: 20px auto;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    .btn-capture:hover {
+        background-color: #21867A; /* Verde oscuro */
+        transform: scale(1.05); /* Efecto de agrandamiento */
+    }
+
+    .btn-capture:active {
+        background-color: #1B5F5B; /* Verde más oscuro */
+    }
+
+    /* Botones personalizados */
+    .btn-custom {
+        display: inline-block;
+        padding: 15px 30px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #EAEAEA; /* Texto claro */
+        background-color: #E94560; /* Rojo vibrante */
+        border: none;
+        border-radius: 10px;
+        margin: 10px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+        text-align: center;
+    }
+
+    .btn-custom:hover {
+        background-color: #1A1A2E; /* Morado oscuro */
+        color: #E94560; /* Texto rojo */
+        transform: scale(1.05); /* Efecto de agrandamiento */
+    }
+
+    .btn-custom:active {
+        background-color: #0F3460; /* Azul oscuro */
+        color: #EAEAEA; /* Texto claro */
+    }
+
+    #content p {
+        font-size: 1.5rem;
+        color: #EAEAEA; /* Texto claro */
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    #content {
+        text-align: center;
+    }
+
+    /* Estilos específicos para el botón de "Tomar Foto" */
+    .btn-photo {
+        background-color: #2A9D8F; /* Verde vibrante */
+        color: #FFFFFF; /* Texto blanco */
+    }
+
+    .btn-photo:hover {
+        background-color: #21867A; /* Verde oscuro */
+        transform: scale(1.05); /* Efecto de agrandamiento */
+    }
+
+    .btn-photo:active {
+        background-color: #1B5F5B; /* Verde más oscuro */
+    }
+</style>
+
+<script>
+    function start() {
+        const content = document.getElementById('content');
+        content.innerHTML = `
+            <form id="uploadForm" method="post" enctype="multipart/form-data" action="/archivo" onsubmit="showLoading()">
+                {% csrf_token %}
+                <button class="btn-custom" type="button" onclick="uploadDocument()">Subir Documento</button>
+                <input type="file" id="fileInput" name="file" style="display: none;" onchange="handleFileUpload(event)">
+            </form>
+            <form id="photoForm" method="post" enctype="multipart/form-data" action="/foto" onsubmit="showLoading()">
+                {% csrf_token %}
+                <button class="btn-custom btn-photo" type="button" onclick="takePhoto()">Tomar Foto</button>
+            </form>
+        `;
+    }
+
+    function uploadDocument() {
+        const fileInput = document.getElementById('fileInput');
+        fileInput.click();
+    }
+
+    function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+            //alert(`Documento seleccionado: ${file.name}`);
+            showLoading(); 
+            const uploadForm = document.getElementById('uploadForm');
+            uploadForm.submit();
+        }
+    }
+
+    function takePhoto() {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        // Solicitar acceso a la cámara
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(function (stream) {
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.autoplay = true;
+
+                video.style.width = '100%';
+                video.style.height = `${window.innerHeight / 2}px`;
+
+                const content = document.getElementById('content');
+                content.innerHTML = '<p>Tomando foto...</p>';
+                content.appendChild(video);
+
+                const captureButton = document.createElement('button');
+                captureButton.textContent = 'Capturar Foto';
+                captureButton.classList.add('btn-capture'); // Agregar clase personalizada
+                content.appendChild(captureButton);
+
+                captureButton.onclick = function () {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const context = canvas.getContext('2d');
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const photoDataUrl = canvas.toDataURL('image/png'); // Obtener la foto en formato base64
+
+                    // Detener el stream de la cámara después de tomar la foto
+                    stream.getTracks().forEach(track => track.stop());
+
+                    // Crear un archivo desde la imagen capturada
+                    const blob = dataURLToBlob(photoDataUrl);
+                    const formData = new FormData();
+                    formData.append('photo', blob, 'captured_photo.png'); // Nombre del archivo enviado al servidor
+
+                    // Mostrar el mensaje de carga
+                    showLoading();
+
+                    // Enviar la foto al servidor
+                    fetch('/foto', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-CSRFToken': getCsrfToken() // Obtener el token CSRF
+                        }
+                    })
+                    .then(response => {
+                        hideLoading(); // Ocultar el mensaje de carga
+                        if (response.ok) {
+                            // Redirigir a foto.html cuando el servidor confirme éxito
+                            window.location.href = '/foto';
+                        } else {
+                            alert('Hubo un error al enviar la foto.');
+                        }
+                    })
+                    .catch(error => {
+                        hideLoading(); // Ocultar el mensaje de carga en caso de error
+                        alert('Error al enviar la foto: ' + error.message);
+                    });
+                };
+            })
+            .catch(function (error) {
+                alert('No se pudo acceder a la cámara: ' + error.message);
+            });
+    } else {
+        alert('Tu navegador no soporta el acceso a la cámara.');
+    }
+}
+
+
+
+    // Convertir Base64 a Blob
+    function dataURLToBlob(dataURL) {
+        const parts = dataURL.split(',');
+        const mime = parts[0].match(/:(.*?);/)[1];
+        const bstr = atob(parts[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], { type: mime });
+    }
+
+    // Obtener token CSRF de las cookies
+    function getCsrfToken() {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.startsWith('csrftoken=')) {
+                return cookie.substring('csrftoken='.length, cookie.length);
+            }
+        }
+        return null;
+    }
+</script>
+
+<div id="content">
+    <p>Bienvenido a nuestra aplicación diseñada para transformar la forma
+         en que las personas con discapacidad visual interactúan con el mundo escrito. 
+         Esta herramienta nos permite detectar texto en imágenes o en documentos PDF y convertirlo en audio,
+          permitiéndote 'escuchar' documentos físicos o digitales.</p>
+    <button class="btn-custom" type="button" onclick="start()">Comenzar</button>
+</div>
+
+
+    {% endblock %}

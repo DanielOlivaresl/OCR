@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Index</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1A1A2E; /* Morado oscuro */
+            margin: 0;
+            padding: 0;
+            color: #EAEAEA; /* Texto claro */
+        }
+
+        .navbar {
+            background-color: #16213E; /* Azul oscuro */
+            color: #EAEAEA;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .navbar a {
+            color: #E94560; /* Rojo vibrante */
+            text-decoration: none;
+            font-size: 1.5rem;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+
+        .navbar a:hover {
+            color: #0F3460; /* Azul brillante */
+        }
+
+        .container {
+            margin: 20px auto;
+            padding: 20px;
+            max-width: 900px;
+            background-color: #0F3460; /* Azul más claro */
+            box-shadow: 0px 6px 10px rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            color: #EAEAEA;
+        }
+
+        #loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            text-align: center;
+            padding-top: 20%;
+            font-size: 20px;
+            z-index: 9999;
+        }
+
+        /* Botones */
+        .btn {
+            background-color: #E94560; /* Rojo vibrante */
+            color: #EAEAEA; /* Texto claro */
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: #1A1A2E; /* Morado oscuro */
+            color: #E94560; /* Texto rojo */
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="/">Inicio</a>
+    </div>
+
+    <div class="container">
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <div id="loading">
+        Cargando, por favor espera...
+    </div>
+
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        // Mostrar el mensaje de carga
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+        }
+    
+        // Ocultar el mensaje de carga
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

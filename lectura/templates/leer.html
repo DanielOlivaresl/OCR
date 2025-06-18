@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    /* Botón de Descargar */
+    .download-btn {
+        color: #FFFFFF; /* Texto blanco */
+        background-color: #F4A261; /* Naranja vibrante */
+        border: none;
+        padding: 12px 25px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        cursor: pointer;
+        margin-top: 15px;
+        text-decoration: none;
+        border-radius: 8px;
+        display: inline-block;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    .download-btn:hover {
+        background-color: #E76F51; /* Rojo suave */
+        transform: scale(1.05); /* Efecto de agrandamiento */
+    }
+
+    .download-btn:active {
+        background-color: #D62828; /* Rojo más oscuro */
+    }
+
+    /* Botón de Volver al Inicio */
+    .back-button {
+        display: inline-block;
+        padding: 12px 25px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        color: #FFFFFF; /* Texto blanco */
+        background-color: #2A9D8F; /* Verde vibrante */
+        border: none;
+        border-radius: 8px;
+        margin-top: 15px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    .back-button:hover {
+        background-color: #21867A; /* Verde más oscuro */
+        transform: scale(1.05); /* Efecto de agrandamiento */
+    }
+
+    .back-button:active {
+        background-color: #1B5F5B; /* Verde aún más oscuro */
+    }
+
+    /* Reproductor de Audio */
+    audio {
+        outline: none;
+        width: 100%;
+        max-width: 400px; /* Ajusta al tamaño del contenedor */
+        margin: 20px auto;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Contenedor del PDF */
+    .embed-container {
+        width: 100%;
+        max-width: 800px;
+        margin: 20px auto;
+        background-color: #1A1A2E; /* Fondo oscuro */
+        border: 1px solid #0F3460; /* Borde azul */
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    embed {
+        width: 100%;
+        height: 600px;
+        border: none;
+    }
+
+    /* Centrado del Contenido */
+    #content {
+        text-align: center;
+        margin-top: 20px;
+    }
+</style>
+
+<div id="content">
+    {% if mensaje %}
+        <p style="color: {% if audio_url %} #2A9D8F {% else %} #E94560 {% endif %}; 
+                  font-weight: bold; margin-bottom: 20px;">
+            {{ mensaje }}
+        </p>
+    {% endif %}
+
+    <!-- Contenedor del PDF (solo para archivos PDF) -->
+    {% if file_extension == '.pdf' %}
+    <div class="embed-container">
+        <embed src="{{ file_url }}" type="application/pdf">
+    </div>
+    {% endif %}
+
+    <!-- Mostrar imagen si es un archivo de imagen -->
+    {% if file_extension in '.jpg,.png,.jpeg' %}
+    <img src="{{ file_url }}" alt="Imagen subida" style="max-width: 100%; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
+    {% endif %}
+
+    <!-- Mostrar contenido del documento si está disponible -->
+    {% if contenido and not audio_url %}
+    <div style="background-color: #1A1A2E; padding: 20px; border-radius: 10px; margin: 20px auto; max-width: 800px;">
+        <h3 style="color: #EAEAEA;">Contenido del documento:</h3>
+        <p style="color: #EAEAEA; white-space: pre-wrap;">{{ contenido }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Controles de audio (solo si hay audio) -->
+    {% if audio_url %}
+    <div class="audio-controls">
+        <!-- Reproductor de audio -->
+        <audio controls>
+            <source src="{{ audio_url }}" type="audio/mpeg">
+            Tu navegador no soporta el reproductor de audio.
+        </audio>
+
+        <!-- Botón de descarga -->
+        <a href="{{ audio_url }}" download class="download-btn">Descargar audio</a>
+    </div>
+    {% endif %}
+
+    <!-- Botón de Volver al Inicio -->
+    <a href="/" class="back-button">Volver al inicio</a>
+</div>
+{% endblock %}
