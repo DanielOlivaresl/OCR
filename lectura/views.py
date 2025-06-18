@@ -1,3 +1,4 @@
+import json
 from django.shortcuts import render
 from django.conf import settings
 import os
@@ -12,6 +13,9 @@ from gtts import gTTS
 
 from elevenlabs.client import ElevenLabs
 from elevenlabs import play
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse, HttpResponseBadRequest
 
 
 def even_labs_tts(texto, archivo_salida):
@@ -233,3 +237,99 @@ def subir_foto(request):
             'contenido': None,
             'mensaje': mensaje
         })
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+@csrf_exempt  # For testing, but configure CSRF properly in production!
+def modify_json(request):
+    if request.method != "POST":
+        return HttpResponseBadRequest("Only POST allowed")
+
+    try:
+        # Parse incoming JSON data from request body
+        incoming_data = json.loads(request.body)
+
+        # Read existing data from JSON file
+        with open(os.path.join(settings.BASE_DIR, 'user_data.json'), 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        # Update existing data with incoming data (this merges keys)
+        
+        print("Incoming Data: ")
+        print(incoming_data)
+        
+        print("Data: ")
+        print(data)
+        
+        
+        # if (incoming_data[incoming_data.keys()[0]])
+        
+        print("User: ")
+        print(incoming_data["username"])
+        
+        
+        if incoming_data["username"] in data.keys(): #User already exists 
+            print("Username already registered")
+            
+            #We check if the password is incorrect
+            
+            if incoming_data["password"] != data[incoming_data["username"]]:
+                
+            
+                return JsonResponse({'status': 'wrongPass'})
+            else:
+                return JsonResponse({'status': 'correctPass'})
+                
+        
+        
+        
+        
+        else: #Register the username
+            os.mkdir("userFiles/"+incoming_data["username"])
+
+            incoming_data = {incoming_data["username"]: incoming_data["password"]}            
+                    
+        
+            data.update(incoming_data)
+
+            # Write updated data back to the JSON file
+            with open(os.path.join(settings.BASE_DIR, 'user_data.json'), 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+
+
+            #After writing the credentials to the .json, we create the folder for the user
+            
+
+            return JsonResponse({'status': 'success', 'updated_data': data})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+
+
+def get_user_files(request, username):
+    user_folder = os.path.join("UserFiles/", username)
+    
+    if not os.path.exists(user_folder):
+        return JsonResponse({'status': 'error', 'message': 'Carpeta no encontrada'}, status=404)
+
+    files = os.listdir(user_folder)
+    return JsonResponse({'status': 'success', 'files': files})

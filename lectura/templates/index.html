@@ -3,7 +3,26 @@
 
 {% block content %}
 <style>
-
+    .file-list {
+        list-style-type: none;
+        padding: 0;
+    }
+    
+    .file-btn {
+        background: none;
+        border: none;
+        color: #2A9D8F;
+        font-size: 1rem;
+        cursor: pointer;
+        text-align: left;
+        padding: 8px;
+        width: 100%;
+        transition: background-color 0.2s ease;
+    }
+    
+    .file-btn:hover {
+        background-color: #f0f0f0;
+    }
 .btn-capture {
         display: inline-block;
         padding: 15px 30px;
@@ -83,22 +102,104 @@
     }
 </style>
 
-<script>
-    function start() {
-        const content = document.getElementById('content');
-        content.innerHTML = `
-            <form id="uploadForm" method="post" enctype="multipart/form-data" action="/archivo" onsubmit="showLoading()">
-                {% csrf_token %}
-                <button class="btn-custom" type="button" onclick="uploadDocument()">Subir Documento</button>
-                <input type="file" id="fileInput" name="file" style="display: none;" onchange="handleFileUpload(event)">
-            </form>
-            <form id="photoForm" method="post" enctype="multipart/form-data" action="/foto" onsubmit="showLoading()">
-                {% csrf_token %}
-                <button class="btn-custom btn-photo" type="button" onclick="takePhoto()">Tomar Foto</button>
-            </form>
-        `;
-    }
 
+
+
+
+<script>
+    
+        window.start = function () {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <form id="uploadForm" method="post" enctype="multipart/form-data" action="/archivo" onsubmit="showLoading()">
+                    {% csrf_token %}
+                    <button class="btn-custom" type="button" onclick="uploadDocument()">Subir Documento</button>
+                    <input type="file" id="fileInput" name="file" style="display: none;" onchange="handleFileUpload(event)">
+                </form>
+                <form id="photoForm" method="post" enctype="multipart/form-data" action="/foto" onsubmit="showLoading()">
+                    {% csrf_token %}
+                    <button class="btn-custom btn-photo" type="button" onclick="takePhoto()">Tomar Foto</button>
+                </form>
+            `;
+        };
+
+        window.viewUserFiles = function(username){
+            
+            const content = document.getElementById('content');
+        
+        
+            fetch(`/get-user-files/${username}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const files = data.files;
+                        let fileListHtml = files.map(file => 
+                            `<li><button class="file-btn" onclick="viewFile('${username}', '${file}')">${file}</button></li>`
+                        ).join('');
+        
+                        content.innerHTML = `
+                            <div id="fileViewer">
+                                <h3>Archivos Disponibles para <span style="color:#2A9D8F">${username}</span></h3>
+                                <ul class="file-list">${fileListHtml}</ul>
+                            </div>
+        
+                            <input type="file" id="fileInput" name="file" style="display: none;" onchange="handleFileUpload(event)">
+                            
+                            <div class="action-buttons">
+                                <button class="btn-custom" type="button" onclick="uploadDocument()">Subir Documento</button>
+                                <button class="btn-custom btn-photo" type="button" onclick="takePhoto()">Tomar Foto</button>
+                            </div>
+                        `;
+                    } else {
+                        content.innerHTML = `<p>Error: ${data.message}</p>`;
+                    }
+                })
+                .catch(err => {
+                    content.innerHTML = `<p>Error al obtener archivos: ${err.message}</p>`;
+                });
+                
+        };
+
+
+    function viewFile(username, filename) {
+        const content = document.getElementById('content');
+        const fileUrl = `/userFiles/${username}/${filename}`;
+        const fileExt = filename.split('.').pop().toLowerCase();
+    
+        let fileViewerHtml = `
+            <h3>Viendo archivo: <span style="color:#2A9D8F">${filename}</span></h3>
+            <div class="file-display" style="margin-top: 20px;">`;
+    
+        if (fileExt === 'png' || fileExt === 'jpg' || fileExt === 'jpeg') {
+            fileViewerHtml += `<img src="${fileUrl}" alt="${filename}" style="max-width:100%; height:auto;">`;
+        } else if (fileExt === 'mp3') {
+            fileViewerHtml += `
+                <audio controls>
+                    <source src="${fileUrl}" type="audio/mpeg">
+                    Tu navegador no soporta la reproducción de audio.
+                </audio>`;
+        } else if (fileExt === 'docx') {
+            // Fallback: offer download link
+            fileViewerHtml += `
+                <p>No se puede mostrar el archivo .docx directamente aquí.</p>
+                <a href="${fileUrl}" download class="btn-custom" style="margin-top: 15px;">Descargar Documento</a>`;
+        } else if(fileExt=== 'pdf') {
+            fileViewerHtml += `
+            <iframe src="${fileUrl}" width="100%" height="600px" style="border: none;">
+                Este navegador no puede mostrar archivos PDF.
+            </iframe>`;
+        }else{
+            fileViewerHtml += `<p>Tipo de archivo no compatible para vista previa.</p>`;
+
+        }
+    
+        fileViewerHtml += `</div>
+            <br>
+            <button class="btn-custom" onclick="window.viewUserFiles('${username}')">Volver</button>
+        `;
+    
+        content.innerHTML = fileViewerHtml;    }
+        
     function uploadDocument() {
         const fileInput = document.getElementById('fileInput');
         fileInput.click();
@@ -211,15 +312,93 @@
         }
         return null;
     }
+
+
+    
+
+
+
+
+
+
+
+    //Login function 
+
+    function handleLogin(event) { 
+
+        event.preventDefault(); // Prevent actual form submission
+    
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value.trim();
+    
+        if (!username || !password) {
+            alert("Por favor ingresa tu usuario y contraseña.");
+            return;
+        }
+    
+        // TODO: Aquí puedes añadir lógica personalizada de validación o autenticación
+        console.log("Intentando iniciar sesión con:", username, password);
+        
+        
+        const newData = {username: username, password:password};
+        
+        fetch('/modify-json/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newData)
+          })
+          .then(response => response.json())
+          .then(data => {
+            if(data.status === 'success') {
+              console.log('JSON updated:', data.updated_data);
+            } else {
+                if(data.status=== 'wrongPass'){
+                    alert("Contra incorrecta");
+
+                }
+                
+                if(data.status=== "correctPass"){
+                    alert("Contra correcta");
+                    window.viewUserFiles(username);
+                    
+                }else{
+                    console.error('Error updating JSON:', data.message);
+                }
+
+
+
+              
+            }
+          })
+          .catch(console.error);
+  
+    };
+
+
+
+
 </script>
 
+
+
 <div id="content">
-    <p>Bienvenido a nuestra aplicación diseñada para transformar la forma
-         en que las personas con discapacidad visual interactúan con el mundo escrito. 
-         Esta herramienta nos permite detectar texto en imágenes o en documentos PDF y convertirlo en audio,
-          permitiéndote 'escuchar' documentos físicos o digitales.</p>
+    <form id="loginForm" onsubmit="handleLogin(event)">
+        <p style="font-size: 1.5rem; color: #EAEAEA; margin-bottom: 20px; text-align: center;">
+            Inicia sesión para continuar
+        </p>
+        <input type="text" id="username" name="username" placeholder="Usuario" required
+               style="padding: 10px; width: 80%; max-width: 300px; font-size: 1rem; margin: 10px; border-radius: 5px; border: none;">
+        <br>
+        <input type="password" id="password" name="password" placeholder="Contraseña" required
+               style="padding: 10px; width: 80%; max-width: 300px; font-size: 1rem; margin: 10px; border-radius: 5px; border: none;">
+        <br>
+        <button class="btn-custom" type="submit">Iniciar Sesión</button>
+    </form>
+
+
     <button class="btn-custom" type="button" onclick="start()">Comenzar</button>
 </div>
+
 
 
     {% endblock %}
