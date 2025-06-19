@@ -158,7 +158,7 @@
 
     function viewFile(username, filename) {
         const content = document.getElementById('content');
-        const fileUrl = `/userFiles/${username}/${filename}`;
+        const fileUrl = `/userFiles/UserFiles/${username}/${filename}`;
         const fileExt = filename.split('.').pop().toLowerCase();
     
         let fileViewerHtml = `
@@ -275,7 +275,9 @@ function takePhoto() {
 
                     const blob = dataURLToBlob(photoDataUrl);
                     const formData = new FormData();
-                    formData.append('photo', blob, 'captured_photo.png');
+                    const uniqueFilename = `photo_${Date.now()}.png`;
+                    formData.append('photo', blob, uniqueFilename);
+
 
                     // Detectar el nombre del usuario o usar 'temp'
                     let username = localStorage.getItem("username") || "temp";

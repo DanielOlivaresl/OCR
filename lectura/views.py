@@ -16,8 +16,43 @@ from elevenlabs import play
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse, HttpResponseBadRequest
 
+import requests
+# K88670086288957
+
 # Carpeta base unificada
 USER_FILES_DIR = os.path.join(settings.MEDIA_ROOT, 'UserFiles')
+
+def read_image_with_ocrspace(file_path, api_key="helloworld", language="spa"):
+    """
+    Realiza OCR en una imagen usando la API de OCR.Space.
+    Retorna el texto extraído o None si hay error o no se encuentra texto.
+    """
+    try:
+        with open(file_path, 'rb') as f:
+            response = requests.post(
+                'https://api.ocr.space/parse/image',
+                files={"file": f},
+                data={
+                    'language': language,
+                    'isOverlayRequired': False
+                },
+                headers={'apikey': api_key}
+            )
+
+        result = response.json()
+        print(result)
+        if result.get("IsErroredOnProcessing"):
+            print(f"Error en OCR.Space: {result.get('ErrorMessage')}")
+            return None
+
+        parsed_results = result.get("ParsedResults")
+        if parsed_results and parsed_results[0].get("ParsedText"):
+            return parsed_results[0]["ParsedText"].strip()
+        else:
+            return None
+    except Exception as e:
+        print(f"Excepción en read_image_with_ocrspace: {str(e)}")
+        return None
 
 
 def even_labs_tts(texto, archivo_salida):
@@ -58,19 +93,19 @@ def texto_a_audio(texto, archivo_salida):
 def read_image_with_paddleocr(file_path):
     """Realiza OCR en una imagen usando PaddleOCR con manejo de errores."""
     try:
-        #ocr = PaddleOCR(use_angle_cls=False, lang="es")
-        #result = ocr.ocr(file_path, cls=False)
+        ocr = PaddleOCR(use_angle_cls=False, lang="es")
+        result = ocr.ocr(file_path, cls=False)
         
         # Verificar si se encontró texto
-        #if not result or not result[0]:
-        #    return None  # Retorna None si no se encontró texto
+        if not result or not result[0]:
+           return None  # Retorna None si no se encontró texto
         
         # Extraer texto de cada línea encontrada
-        #texto_extraido = [line[1][0] for line in result[0] if line and len(line) > 1 and line[1]]
+        texto_extraido = [line[1][0] for line in result[0] if line and len(line) > 1 and line[1]]
         
         # Unir todas las líneas de texto encontradas
-        #texto_final = " ".join(texto_extraido) if texto_extraido else None
-        return "holaaa"  # texto_final
+        texto_final = " ".join(texto_extraido) if texto_extraido else None
+        return  texto_final # "holaaa"
         
     except Exception as e:
         print(f"Error en OCR: {str(e)}")
@@ -129,7 +164,7 @@ def cargar_archivo(request):
                 if not contenido or contenido.strip() == "":
                     mensaje = "No se encontró texto en el documento Word."
             elif file_type.startswith("image/"):
-                contenido = read_image_with_paddleocr(file_path)
+                contenido = read_image_with_ocrspace(file_path)  #read_image_with_paddleocr(file_path)
                 if contenido is None:
                     mensaje = "No se encontró texto en la imagen."
             else:
@@ -173,7 +208,7 @@ def subir_foto(request):
             for chunk in photo.chunks():
                 destination.write(chunk)
 
-        contenido = read_image_with_paddleocr(save_path)
+        contenido = read_image_with_ocrspace(save_path)#read_image_with_paddleocr(save_path)
 
         if contenido is None:
             mensaje = "No se encontró texto en la imagen."
