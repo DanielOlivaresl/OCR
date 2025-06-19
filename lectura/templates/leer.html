@@ -91,6 +91,16 @@
 </style>
 
 <div id="content">
+    <input type="hidden" name="username" id="username-input" value="">
+<script>
+    // Asegurarse de que el campo hidden tenga el username
+    document.addEventListener('DOMContentLoaded', function () {
+        const username = localStorage.getItem("username");
+        if (username) {
+            document.getElementById("username-input").value = username;
+        }
+    });
+</script>
     {% if mensaje %}
         <p style="color: {% if audio_url %} #2A9D8F {% else %} #E94560 {% endif %}; 
                   font-weight: bold; margin-bottom: 20px;">

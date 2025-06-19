@@ -7,8 +7,7 @@ from django.core.files.storage import FileSystemStorage
 from PyPDF2 import PdfReader  # Para extraer texto de PDFs
     # import pdfplumber  # Para una extracción más precisa
 from docx import Document  # Para manejar archivos .docx
-import easyocr  # Para realizar OCR en imágenes
-from paddleocr import PaddleOCR 
+
 from gtts import gTTS   
 
 from elevenlabs.client import ElevenLabs
@@ -56,19 +55,19 @@ def texto_a_audio(texto, archivo_salida):
 def read_image_with_paddleocr(file_path):
     """Realiza OCR en una imagen usando PaddleOCR con manejo de errores."""
     try:
-        ocr = PaddleOCR(use_angle_cls=True, lang="es")
-        result = ocr.ocr(file_path, cls=True)
+        #ocr = PaddleOCR(use_angle_cls=False, lang="es")
+        #result = ocr.ocr(file_path, cls=False)
         
         # Verificar si se encontró texto
-        if not result or not result[0]:
-            return None  # Retorna None si no se encontró texto
+        #if not result or not result[0]:
+        #    return None  # Retorna None si no se encontró texto
         
         # Extraer texto de cada línea encontrada
-        texto_extraido = [line[1][0] for line in result[0] if line and len(line) > 1 and line[1]]
+        #texto_extraido = [line[1][0] for line in result[0] if line and len(line) > 1 and line[1]]
         
         # Unir todas las líneas de texto encontradas
-        texto_final = " ".join(texto_extraido) if texto_extraido else None
-        return texto_final
+        #texto_final = " ".join(texto_extraido) if texto_extraido else None
+        return "holaaa"#texto_final
         
     except Exception as e:
         print(f"Error en OCR: {str(e)}")
@@ -96,68 +95,64 @@ def bienvenida(request):
 
 def cargar_archivo(request):
     """Procesa el archivo subido y genera un MP3 con el contenido."""
-    if request.method == "POST" and request.FILES["file"]:
+    if request.method == "POST" and request.FILES.get("file"):
         archivo = request.FILES["file"]
         file_extension = os.path.splitext(archivo.name)[1].lower()
-        # Guardar el archivo en la carpeta local
-        file_path = os.path.join(settings.MEDIA_ROOT, archivo.name)
+
+        # Obtener el nombre de usuario desde POST o usar 'temp' por defecto
+        username = request.POST.get("username", "temp")
+        user_folder = os.path.join("userFiles", username)
+        os.makedirs(user_folder, exist_ok=True)
+
+        file_path = os.path.join(user_folder, archivo.name)
         if os.path.exists(file_path):
             os.remove(file_path)
-        fs = FileSystemStorage(location=settings.MEDIA_ROOT)
-        filename = fs.save(archivo.name, archivo)
-        file_url = os.path.join(settings.MEDIA_URL, filename)
 
-        # Determinar el tipo de archivo
+        # Guardar el archivo
+        fs = FileSystemStorage(location=user_folder)
+        filename = fs.save(archivo.name, archivo)
+        file_url = os.path.join("/userFiles", username, filename)
+
+        # Procesamiento OCR
         file_type = archivo.content_type
         mensaje = None
         contenido = None
 
-        # Procesar el archivo y extraer el contenido con manejo de errores
         try:
             if file_type == "application/pdf":
-                print("El archivo subido es un PDF.")
-                
                 contenido = read_pdf(file_path)
                 if not contenido or contenido.strip() == "":
                     mensaje = "No se encontró texto en el PDF."
             elif file_type in ["application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]:
-                print("El archivo subido es un documento Word.")
                 contenido = read_docx(file_path)
                 if not contenido or contenido.strip() == "":
                     mensaje = "No se encontró texto en el documento Word."
             elif file_type.startswith("image/"):
-                print("El archivo subido es una imagen.")
                 contenido = read_image_with_paddleocr(file_path)
                 if contenido is None:
                     mensaje = "No se encontró texto en la imagen."
             else:
-                print("El tipo de archivo subido no está reconocido.")
                 contenido = "Tipo de archivo no soportado."
                 mensaje = "Tipo de archivo no soportado."
         except Exception as e:
-            print(f"Error al procesar archivo: {str(e)}")
             contenido = f"Error al procesar el archivo: {str(e)}"
             mensaje = "Ocurrió un error al procesar el archivo."
 
-        print(contenido)
-
-        # Crear el archivo MP3 solo si hay contenido válido
+        # Crear MP3 si hay contenido válido
         audio_url = None
         if contenido and contenido.strip() != "" and not mensaje:
-            audio_path = os.path.join(settings.MEDIA_ROOT, f"{os.path.splitext(archivo.name)[0]}.mp3")
+            audio_path = os.path.join(user_folder, f"{os.path.splitext(archivo.name)[0]}.mp3")
             texto_a_audio(contenido, audio_path)
-            # even_labs_tts(contenido,audio_path)
-            audio_url = os.path.join(settings.MEDIA_URL, f"{os.path.splitext(archivo.name)[0]}.mp3")
+            audio_url = os.path.join("/userFiles", username, f"{os.path.splitext(archivo.name)[0]}.mp3")
         elif not mensaje:
             mensaje = "No se encontró texto en el documento."
 
-        # Renderizar la página con las URLs del archivo y audio
         return render(request, "leer.html", {
             "file_url": file_url,
             "contenido": contenido,
             "audio_url": audio_url,
             "mensaje": mensaje,
-            "file_extension": file_extension  # Añade esto
+            "file_extension": file_extension
         })
 
     return render(request, "index.html")
@@ -166,33 +161,34 @@ def subir_foto(request):
     """Procesa la foto subida, realiza OCR y genera un MP3 del texto extraído."""
     if request.method == 'POST' and 'photo' in request.FILES:
         photo = request.FILES['photo']
-        save_path = os.path.join(settings.MEDIA_ROOT, 'fotos', photo.name)
+        
+        # Obtener el nombre de usuario del formulario (o usar 'temp' por defecto)
+        username = request.POST.get('username', 'temp')
+        print(username, "hi")
+        # Crear la ruta de guardado por usuario
+        user_folder = os.path.join(settings.MEDIA_ROOT, 'UserFiles', username)
+        os.makedirs(user_folder, exist_ok=True)
 
-        # Guarda la foto en la carpeta media/fotos
-        os.makedirs(os.path.join(settings.MEDIA_ROOT, 'fotos'), exist_ok=True)
+        # Guardar la foto en la carpeta correspondiente
+        save_path = os.path.join(user_folder, photo.name)
         with open(save_path, 'wb+') as destination:
             for chunk in photo.chunks():
                 destination.write(chunk)
 
-        # Realizar OCR en la foto con manejo de errores
+        # Realizar OCR
         contenido = read_image_with_paddleocr(save_path)
-        
-        # Determinar mensajes según el resultado del OCR
+
         if contenido is None:
             mensaje = "No se encontró texto en la imagen."
             audio_url = None
         else:
             mensaje = "¡Texto encontrado en la imagen!"
             print(f"Texto extraído de la foto: {contenido}")
-            
-            # Crear el archivo MP3 del texto extraído
-            audio_path = os.path.join(settings.MEDIA_ROOT, 'fotos', f"{os.path.splitext(photo.name)[0]}.mp3")
+            audio_path = os.path.join(user_folder, f"{os.path.splitext(photo.name)[0]}.mp3")
             texto_a_audio(contenido, audio_path)
-            
-            audio_url = f"{settings.MEDIA_URL}fotos/{os.path.splitext(photo.name)[0]}.mp3"
+            audio_url = f"{settings.MEDIA_URL}UserFiles/{username}/{os.path.splitext(photo.name)[0]}.mp3"
 
-        # Generar URL para la foto
-        photo_url = f"{settings.MEDIA_URL}fotos/{photo.name}"
+        photo_url = f"{settings.MEDIA_URL}UserFiles/{username}/{photo.name}"
 
         return render(request, 'foto.html', {
             'photo_url': photo_url,
@@ -202,8 +198,8 @@ def subir_foto(request):
         })
 
     elif request.method == 'GET':
-        # Buscar el archivo de imagen más reciente
-        folder_path = os.path.join(settings.MEDIA_ROOT, 'fotos')
+        # Mostrar la imagen más reciente (solo de temp por ahora)
+        folder_path = os.path.join(settings.MEDIA_ROOT, 'UserFiles', 'temp')
         if os.path.exists(folder_path):
             image_files = sorted(
                 [f for f in os.listdir(folder_path) if f.endswith(('.png', '.jpg', '.jpeg'))],
@@ -216,10 +212,9 @@ def subir_foto(request):
                 reverse=True
             )
 
-            photo_url = f"{settings.MEDIA_URL}fotos/{image_files[0]}" if image_files else None
-            audio_url = f"{settings.MEDIA_URL}fotos/{audio_files[0]}" if audio_files else None
-            
-            # Determinar mensaje para GET request
+            photo_url = f"{settings.MEDIA_URL}UserFiles/temp/{image_files[0]}" if image_files else None
+            audio_url = f"{settings.MEDIA_URL}UserFiles/temp/{audio_files[0]}" if audio_files else None
+
             if photo_url and not audio_url:
                 mensaje = "No se encontró texto en la imagen anterior."
             elif photo_url and audio_url:
@@ -237,9 +232,7 @@ def subir_foto(request):
             'contenido': None,
             'mensaje': mensaje
         })
-        
-        
-        
+
         
         
         

@@ -16,9 +16,11 @@ media/
 venv/
 .env/
 .env.*
-
+.venv/
 # Archivos de configuración del sistema operativo o IDE
 .DS_Store
 *.swp
 .idea/
 .vscode/
+
+/userFiles/

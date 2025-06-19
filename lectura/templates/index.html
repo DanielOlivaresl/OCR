@@ -109,19 +109,14 @@
 <script>
     
         window.start = function () {
-            const content = document.getElementById('content');
-            content.innerHTML = `
-                <form id="uploadForm" method="post" enctype="multipart/form-data" action="/archivo" onsubmit="showLoading()">
-                    {% csrf_token %}
-                    <button class="btn-custom" type="button" onclick="uploadDocument()">Subir Documento</button>
-                    <input type="file" id="fileInput" name="file" style="display: none;" onchange="handleFileUpload(event)">
-                </form>
-                <form id="photoForm" method="post" enctype="multipart/form-data" action="/foto" onsubmit="showLoading()">
-                    {% csrf_token %}
-                    <button class="btn-custom btn-photo" type="button" onclick="takePhoto()">Tomar Foto</button>
-                </form>
-            `;
-        };
+    const content = document.getElementById('content');
+    content.innerHTML = `
+        <input type="file" id="fileInput" name="file" style="display:none;" onchange="handleFileUpload(event)">
+        <button class="btn-custom" type="button" onclick="document.getElementById('fileInput').click()">Subir Documento</button>
+        <button class="btn-custom btn-photo" type="button" onclick="takePhoto()">Tomar Foto</button>
+    `;
+};
+
 
         window.viewUserFiles = function(username){
             
@@ -205,19 +200,50 @@
         fileInput.click();
     }
 
-    function handleFileUpload(event) {
-        const file = event.target.files[0];
-        if (file) {
-            //alert(`Documento seleccionado: ${file.name}`);
-            showLoading(); 
-            const uploadForm = document.getElementById('uploadForm');
-            uploadForm.submit();
-        }
+function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    // Detectar si estamos viendo archivos de un usuario
+    const fileViewer = document.getElementById("fileViewer");
+    let username = "temp";  // Por defecto para no logueados
+
+    if (fileViewer) {
+        const span = fileViewer.querySelector("span");
+        if (span) username = span.textContent;
     }
 
-    function takePhoto() {
+    formData.append("username", username); // Enviamos el username
+
+    showLoading();
+
+    fetch('/archivo', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: formData
+    })
+    .then(response => response.text())
+    .then(html => {
+        hideLoading();
+        document.open();
+        document.write(html);  // Renderiza la página leer.html
+        document.close();
+    })
+    .catch(error => {
+        hideLoading();
+        alert("Error al subir el archivo: " + error.message);
+    });
+}
+
+
+
+function takePhoto() {
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        // Solicitar acceso a la cámara
         navigator.mediaDevices.getUserMedia({ video: true })
             .then(function (stream) {
                 const video = document.createElement('video');
@@ -233,7 +259,7 @@
 
                 const captureButton = document.createElement('button');
                 captureButton.textContent = 'Capturar Foto';
-                captureButton.classList.add('btn-capture'); // Agregar clase personalizada
+                captureButton.classList.add('btn-capture');
                 content.appendChild(captureButton);
 
                 captureButton.onclick = function () {
@@ -242,38 +268,43 @@
                     canvas.height = video.videoHeight;
                     const context = canvas.getContext('2d');
                     context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const photoDataUrl = canvas.toDataURL('image/png'); // Obtener la foto en formato base64
+                    const photoDataUrl = canvas.toDataURL('image/png');
 
-                    // Detener el stream de la cámara después de tomar la foto
+                    // Detener el stream de la cámara
                     stream.getTracks().forEach(track => track.stop());
 
-                    // Crear un archivo desde la imagen capturada
                     const blob = dataURLToBlob(photoDataUrl);
                     const formData = new FormData();
-                    formData.append('photo', blob, 'captured_photo.png'); // Nombre del archivo enviado al servidor
+                    formData.append('photo', blob, 'captured_photo.png');
 
-                    // Mostrar el mensaje de carga
+                    // Detectar el nombre del usuario o usar 'temp'
+                    let username = "temp";
+                    const fileViewer = document.getElementById("fileViewer");
+                    if (fileViewer) {
+                        const span = fileViewer.querySelector("span");
+                        if (span) username = span.textContent;
+                    }
+                    formData.append("username", username);
+
                     showLoading();
 
-                    // Enviar la foto al servidor
                     fetch('/foto', {
                         method: 'POST',
                         body: formData,
                         headers: {
-                            'X-CSRFToken': getCsrfToken() // Obtener el token CSRF
+                            'X-CSRFToken': getCsrfToken()
                         }
                     })
                     .then(response => {
-                        hideLoading(); // Ocultar el mensaje de carga
+                        hideLoading();
                         if (response.ok) {
-                            // Redirigir a foto.html cuando el servidor confirme éxito
                             window.location.href = '/foto';
                         } else {
                             alert('Hubo un error al enviar la foto.');
                         }
                     })
                     .catch(error => {
-                        hideLoading(); // Ocultar el mensaje de carga en caso de error
+                        hideLoading();
                         alert('Error al enviar la foto: ' + error.message);
                     });
                 };
@@ -285,7 +316,6 @@
         alert('Tu navegador no soporta el acceso a la cámara.');
     }
 }
-
 
 
     // Convertir Base64 a Blob
@@ -351,6 +381,8 @@
           .then(data => {
             if(data.status === 'success') {
               console.log('JSON updated:', data.updated_data);
+              localStorage.setItem("username", username);
+              window.viewUserFiles(username);
             } else {
                 if(data.status=== 'wrongPass'){
                     alert("Contra incorrecta");
@@ -359,6 +391,7 @@
                 
                 if(data.status=== "correctPass"){
                     alert("Contra correcta");
+                    localStorage.setItem("username", username);
                     window.viewUserFiles(username);
                     
                 }else{
@@ -379,6 +412,13 @@
 
 </script>
 
+<script>
+    const username = localStorage.getItem("username");
+    if (username) {
+        const usernameInputs = document.querySelectorAll("input[name='username']");
+        usernameInputs.forEach(input => input.value = username);
+    }
+</script>
 
 
 <div id="content">
@@ -386,6 +426,8 @@
         <p style="font-size: 1.5rem; color: #EAEAEA; margin-bottom: 20px; text-align: center;">
             Inicia sesión para continuar
         </p>
+        <input type="hidden" id="username-input" name="username" value="">
+
         <input type="text" id="username" name="username" placeholder="Usuario" required
                style="padding: 10px; width: 80%; max-width: 300px; font-size: 1rem; margin: 10px; border-radius: 5px; border: none;">
         <br>
