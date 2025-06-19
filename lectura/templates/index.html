@@ -278,7 +278,7 @@ function takePhoto() {
                     formData.append('photo', blob, 'captured_photo.png');
 
                     // Detectar el nombre del usuario o usar 'temp'
-                    let username = "temp";
+                    let username = localStorage.getItem("username") || "temp";
                     const fileViewer = document.getElementById("fileViewer");
                     if (fileViewer) {
                         const span = fileViewer.querySelector("span");

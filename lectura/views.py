@@ -5,7 +5,7 @@ import os
 from django.http import HttpResponse
 from django.core.files.storage import FileSystemStorage
 from PyPDF2 import PdfReader  # Para extraer texto de PDFs
-    # import pdfplumber  # Para una extracción más precisa
+# import pdfplumber  # Para una extracción más precisa
 from docx import Document  # Para manejar archivos .docx
 
 from gtts import gTTS   
@@ -16,11 +16,13 @@ from elevenlabs import play
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse, HttpResponseBadRequest
 
+# Carpeta base unificada
+USER_FILES_DIR = os.path.join(settings.MEDIA_ROOT, 'UserFiles')
+
 
 def even_labs_tts(texto, archivo_salida):
     """Convierte texto a audio usando ElevenLabs y crea directorios si no existen"""
     try:
-        # Verificar y crear directorios si no existen
         os.makedirs(os.path.dirname(archivo_salida), exist_ok=True)
         
         client = ElevenLabs(
@@ -34,7 +36,6 @@ def even_labs_tts(texto, archivo_salida):
             output_format="mp3_44100_128"
         )
         
-        # Guardar el archivo
         with open(archivo_salida, "wb") as f:
             for chunk in audio_stream:
                 if chunk:
@@ -45,11 +46,13 @@ def even_labs_tts(texto, archivo_salida):
     except Exception as e:
         print(f"Error en ElevenLabs TTS: {str(e)}")
         return False
+
+
 def texto_a_audio(texto, archivo_salida):
-        """Convierte texto a un archivo de audio MP3."""
-        tts = gTTS(text=texto, lang="es", slow=False)
-        tts.save(archivo_salida)
-        print(f"Audio guardado en: {archivo_salida}")    
+    """Convierte texto a un archivo de audio MP3."""
+    tts = gTTS(text=texto, lang="es", slow=False)
+    tts.save(archivo_salida)
+    print(f"Audio guardado en: {archivo_salida}")    
 
 
 def read_image_with_paddleocr(file_path):
@@ -67,31 +70,32 @@ def read_image_with_paddleocr(file_path):
         
         # Unir todas las líneas de texto encontradas
         #texto_final = " ".join(texto_extraido) if texto_extraido else None
-        return "holaaa"#texto_final
+        return "holaaa"  # texto_final
         
     except Exception as e:
         print(f"Error en OCR: {str(e)}")
         return None
 
+
 def read_pdf(file_path):
-        """Lee texto de un PDF usando PyPDF2."""
-        reader = PdfReader(file_path)
-        text = ""
-        for page in reader.pages:
-            text += page.extract_text()
-        return text    
+    """Lee texto de un PDF usando PyPDF2."""
+    reader = PdfReader(file_path)
+    text = ""
+    for page in reader.pages:
+        text += page.extract_text()
+    return text    
 
 
 def read_docx(file_path):
-        """Lee texto de un documento Word (.docx)."""
-        doc = Document(file_path)
-        text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
-        return text    
+    """Lee texto de un documento Word (.docx)."""
+    doc = Document(file_path)
+    text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
+    return text    
 
 
-# Create your views here.
 def bienvenida(request):
-        return render(request, 'index.html')        
+    return render(request, 'index.html')        
+
 
 def cargar_archivo(request):
     """Procesa el archivo subido y genera un MP3 con el contenido."""
@@ -99,21 +103,18 @@ def cargar_archivo(request):
         archivo = request.FILES["file"]
         file_extension = os.path.splitext(archivo.name)[1].lower()
 
-        # Obtener el nombre de usuario desde POST o usar 'temp' por defecto
         username = request.POST.get("username", "temp")
-        user_folder = os.path.join("userFiles", username)
+        user_folder = os.path.join(USER_FILES_DIR, username)
         os.makedirs(user_folder, exist_ok=True)
 
         file_path = os.path.join(user_folder, archivo.name)
         if os.path.exists(file_path):
             os.remove(file_path)
 
-        # Guardar el archivo
         fs = FileSystemStorage(location=user_folder)
         filename = fs.save(archivo.name, archivo)
-        file_url = os.path.join("/userFiles", username, filename)
+        file_url = os.path.join(settings.MEDIA_URL, 'UserFiles', username, filename)
 
-        # Procesamiento OCR
         file_type = archivo.content_type
         mensaje = None
         contenido = None
@@ -138,12 +139,11 @@ def cargar_archivo(request):
             contenido = f"Error al procesar el archivo: {str(e)}"
             mensaje = "Ocurrió un error al procesar el archivo."
 
-        # Crear MP3 si hay contenido válido
         audio_url = None
         if contenido and contenido.strip() != "" and not mensaje:
             audio_path = os.path.join(user_folder, f"{os.path.splitext(archivo.name)[0]}.mp3")
             texto_a_audio(contenido, audio_path)
-            audio_url = os.path.join("/userFiles", username, f"{os.path.splitext(archivo.name)[0]}.mp3")
+            audio_url = os.path.join(settings.MEDIA_URL, 'UserFiles', username, f"{os.path.splitext(archivo.name)[0]}.mp3")
         elif not mensaje:
             mensaje = "No se encontró texto en el documento."
 
@@ -157,25 +157,22 @@ def cargar_archivo(request):
 
     return render(request, "index.html")
 
+
 def subir_foto(request):
     """Procesa la foto subida, realiza OCR y genera un MP3 del texto extraído."""
     if request.method == 'POST' and 'photo' in request.FILES:
         photo = request.FILES['photo']
-        
-        # Obtener el nombre de usuario del formulario (o usar 'temp' por defecto)
         username = request.POST.get('username', 'temp')
         print(username, "hi")
-        # Crear la ruta de guardado por usuario
-        user_folder = os.path.join(settings.MEDIA_ROOT, 'UserFiles', username)
+
+        user_folder = os.path.join(USER_FILES_DIR, username)
         os.makedirs(user_folder, exist_ok=True)
 
-        # Guardar la foto en la carpeta correspondiente
         save_path = os.path.join(user_folder, photo.name)
         with open(save_path, 'wb+') as destination:
             for chunk in photo.chunks():
                 destination.write(chunk)
 
-        # Realizar OCR
         contenido = read_image_with_paddleocr(save_path)
 
         if contenido is None:
@@ -198,8 +195,7 @@ def subir_foto(request):
         })
 
     elif request.method == 'GET':
-        # Mostrar la imagen más reciente (solo de temp por ahora)
-        folder_path = os.path.join(settings.MEDIA_ROOT, 'UserFiles', 'temp')
+        folder_path = os.path.join(USER_FILES_DIR, 'temp')
         if os.path.exists(folder_path):
             image_files = sorted(
                 [f for f in os.listdir(folder_path) if f.endswith(('.png', '.jpg', '.jpeg'))],
@@ -233,93 +229,39 @@ def subir_foto(request):
             'mensaje': mensaje
         })
 
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-@csrf_exempt  # For testing, but configure CSRF properly in production!
+
+@csrf_exempt
 def modify_json(request):
     if request.method != "POST":
         return HttpResponseBadRequest("Only POST allowed")
 
     try:
-        # Parse incoming JSON data from request body
         incoming_data = json.loads(request.body)
 
-        # Read existing data from JSON file
         with open(os.path.join(settings.BASE_DIR, 'user_data.json'), 'r', encoding='utf-8') as f:
             data = json.load(f)
 
-        # Update existing data with incoming data (this merges keys)
-        
-        print("Incoming Data: ")
-        print(incoming_data)
-        
-        print("Data: ")
-        print(data)
-        
-        
-        # if (incoming_data[incoming_data.keys()[0]])
-        
-        print("User: ")
-        print(incoming_data["username"])
-        
-        
-        if incoming_data["username"] in data.keys(): #User already exists 
-            print("Username already registered")
-            
-            #We check if the password is incorrect
-            
+        if incoming_data["username"] in data.keys():
             if incoming_data["password"] != data[incoming_data["username"]]:
-                
-            
                 return JsonResponse({'status': 'wrongPass'})
             else:
                 return JsonResponse({'status': 'correctPass'})
-                
-        
-        
-        
-        
-        else: #Register the username
-            os.mkdir("userFiles/"+incoming_data["username"])
+        else:
+            os.makedirs(os.path.join(USER_FILES_DIR, incoming_data["username"]), exist_ok=True)
 
-            incoming_data = {incoming_data["username"]: incoming_data["password"]}            
-                    
-        
+            incoming_data = {incoming_data["username"]: incoming_data["password"]}
             data.update(incoming_data)
 
-            # Write updated data back to the JSON file
             with open(os.path.join(settings.BASE_DIR, 'user_data.json'), 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
-
-
-            #After writing the credentials to the .json, we create the folder for the user
-            
 
             return JsonResponse({'status': 'success', 'updated_data': data})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
 
-
 def get_user_files(request, username):
-    user_folder = os.path.join("UserFiles/", username)
+    user_folder = os.path.join(USER_FILES_DIR, username)
     
     if not os.path.exists(user_folder):
         return JsonResponse({'status': 'error', 'message': 'Carpeta no encontrada'}, status=404)
