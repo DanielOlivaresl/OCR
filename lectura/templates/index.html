@@ -193,7 +193,8 @@
             <button class="btn-custom" onclick="window.viewUserFiles('${username}')">Volver</button>
         `;
     
-        content.innerHTML = fileViewerHtml;    }
+        content.innerHTML = fileViewerHtml;  
+    }
         
     function uploadDocument() {
         const fileInput = document.getElementById('fileInput');
@@ -207,16 +208,14 @@ function handleFileUpload(event) {
     const formData = new FormData();
     formData.append("file", file);
 
-    // Detectar si estamos viendo archivos de un usuario
+    let username = "temp";
     const fileViewer = document.getElementById("fileViewer");
-    let username = "temp";  // Por defecto para no logueados
-
     if (fileViewer) {
         const span = fileViewer.querySelector("span");
         if (span) username = span.textContent;
     }
 
-    formData.append("username", username); // Enviamos el username
+    formData.append("username", username);
 
     showLoading();
 
@@ -227,12 +226,13 @@ function handleFileUpload(event) {
         },
         body: formData
     })
-    .then(response => response.text())
-    .then(html => {
+    .then(response => {
         hideLoading();
-        document.open();
-        document.write(html);  // Renderiza la página leer.html
-        document.close();
+        if (response.ok) {
+            window.location.href = `/archivo?filename=${encodeURIComponent(file.name)}&username=${encodeURIComponent(username)}`;
+        } else {
+            alert('Error al subir el archivo.');
+        }
     })
     .catch(error => {
         hideLoading();
@@ -300,7 +300,7 @@ function takePhoto() {
                     .then(response => {
                         hideLoading();
                         if (response.ok) {
-                            window.location.href = '/foto';
+                            window.location.href = `/foto?filename=${encodeURIComponent(uniqueFilename)}&username=${encodeURIComponent(username)}`;
                         } else {
                             alert('Hubo un error al enviar la foto.');
                         }
@@ -356,58 +356,59 @@ function takePhoto() {
 
     //Login function 
 
-    function handleLogin(event) { 
+function handleLogin(event) { 
+    event.preventDefault(); // Prevent actual form submission
 
-        event.preventDefault(); // Prevent actual form submission
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const messageBox = document.getElementById("login-message");
+
+    if (!username || !password) {
+        messageBox.textContent = "Por favor ingresa tu usuario y contraseña.";
+        messageBox.style.color = "#E94560";
+        return;
+    }
+
+    console.log("Intentando iniciar sesión con:", username, password);
     
-        const username = document.getElementById("username").value.trim();
-        const password = document.getElementById("password").value.trim();
+    const newData = { username: username, password: password };
     
-        if (!username || !password) {
-            alert("Por favor ingresa tu usuario y contraseña.");
-            return;
-        }
-    
-        // TODO: Aquí puedes añadir lógica personalizada de validación o autenticación
-        console.log("Intentando iniciar sesión con:", username, password);
-        
-        
-        const newData = {username: username, password:password};
-        
-        fetch('/modify-json/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newData)
-          })
-          .then(response => response.json())
-          .then(data => {
-            if(data.status === 'success') {
-              console.log('JSON updated:', data.updated_data);
-              localStorage.setItem("username", username);
-              window.viewUserFiles(username);
-            } else {
-                if(data.status=== 'wrongPass'){
-                    alert("Contra incorrecta");
-
-                }
-                
-                if(data.status=== "correctPass"){
-                    alert("Contra correcta");
-                    localStorage.setItem("username", username);
-                    window.viewUserFiles(username);
-                    
-                }else{
-                    console.error('Error updating JSON:', data.message);
-                }
-
-
-
-              
+    fetch('/modify-json/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            console.log('JSON updated:', data.updated_data);
+            localStorage.setItem("username", username);
+            messageBox.textContent = "";
+            window.viewUserFiles(username);
+        } else {
+            if (data.status === 'wrongPass') {
+                messageBox.textContent = "Contraseña incorrecta. Inténtalo de nuevo.";
+                messageBox.style.color = "#E94560";
+                document.getElementById("password").value = "";
             }
-          })
-          .catch(console.error);
-  
-    };
+
+            if (data.status === 'correctPass') {
+                messageBox.textContent = "";
+                localStorage.setItem("username", username);
+                window.viewUserFiles(username);
+            } else if (!['wrongPass', 'correctPass'].includes(data.status)) {
+                console.error('Error updating JSON:', data.message);
+                messageBox.textContent = "Error al procesar el login.";
+                messageBox.style.color = "#E94560";
+            }
+        }
+    })
+    .catch(error => {
+        console.error("Error de red:", error);
+        messageBox.textContent = "Error de conexión con el servidor.";
+        messageBox.style.color = "#E94560";
+    });
+};
 
 
 
@@ -424,6 +425,7 @@ function takePhoto() {
 
 
 <div id="content">
+    <div id="login-message" style="color: #E94560; font-weight: bold; margin-bottom: 15px;"></div>
     <form id="loginForm" onsubmit="handleLogin(event)">
         <p style="font-size: 1.5rem; color: #EAEAEA; margin-bottom: 20px; text-align: center;">
             Inicia sesión para continuar
@@ -442,7 +444,18 @@ function takePhoto() {
 
     <button class="btn-custom" type="button" onclick="start()">Comenzar</button>
 </div>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const username = localStorage.getItem("username");
+    const shouldReload = localStorage.getItem("reload");
+    if (username && shouldReload) {
+        localStorage.removeItem("reload");
+        viewUserFiles(username);
+    }
 
+    // Otras funciones como takePhoto, uploadDocument, etc. también van aquí
+});
+</script>
 
 
     {% endblock %}

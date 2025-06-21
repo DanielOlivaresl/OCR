@@ -189,6 +189,27 @@ def cargar_archivo(request):
             "mensaje": mensaje,
             "file_extension": file_extension
         })
+    elif request.method == "GET":
+        filename = request.GET.get("filename")
+        username = request.GET.get("username", "temp")
+
+        if filename:
+            user_folder = os.path.join(USER_FILES_DIR, username)
+            file_path = os.path.join(user_folder, filename)
+            file_extension = os.path.splitext(filename)[1].lower()
+            file_url = f"{settings.MEDIA_URL}UserFiles/{username}/{filename}"
+
+            # Verifica si existe audio
+            audio_path = os.path.join(user_folder, f"{os.path.splitext(filename)[0]}.mp3")
+            audio_url = f"{settings.MEDIA_URL}UserFiles/{username}/{os.path.splitext(filename)[0]}.mp3" if os.path.exists(audio_path) else None
+
+            return render(request, "leer.html", {
+                "file_url": file_url,
+                "audio_url": audio_url,
+                "contenido": None,
+                "mensaje": "Archivo procesado correctamente.",
+                "file_extension": file_extension
+            })
 
     return render(request, "index.html")
 
@@ -208,7 +229,7 @@ def subir_foto(request):
             for chunk in photo.chunks():
                 destination.write(chunk)
 
-        contenido = read_image_with_ocrspace(save_path)#read_image_with_paddleocr(save_path)
+        contenido = read_image_with_ocrspace(save_path)  # read_image_with_paddleocr(save_path)
 
         if contenido is None:
             mensaje = "No se encontró texto en la imagen."
@@ -230,7 +251,26 @@ def subir_foto(request):
         })
 
     elif request.method == 'GET':
-        folder_path = os.path.join(USER_FILES_DIR, 'temp')
+        filename = request.GET.get('filename')
+        username = request.GET.get('username', 'temp')
+        if filename:
+            user_folder = os.path.join(USER_FILES_DIR, username)
+            photo_path = os.path.join(user_folder, filename)
+            audio_path = os.path.join(user_folder, f"{os.path.splitext(filename)[0]}.mp3")
+
+            photo_url = f"{settings.MEDIA_URL}UserFiles/{username}/{filename}" if os.path.exists(photo_path) else None
+            audio_url = f"{settings.MEDIA_URL}UserFiles/{username}/{os.path.splitext(filename)[0]}.mp3" if os.path.exists(audio_path) else None
+            mensaje = "Resultados del archivo recientemente subido."
+
+            return render(request, 'foto.html', {
+                'photo_url': photo_url,
+                'audio_url': audio_url,
+                'contenido': None,
+                'mensaje': mensaje
+            })
+
+        # Fallback en caso de que no se pase filename
+        folder_path = os.path.join(USER_FILES_DIR, username)
         if os.path.exists(folder_path):
             image_files = sorted(
                 [f for f in os.listdir(folder_path) if f.endswith(('.png', '.jpg', '.jpeg'))],
@@ -243,8 +283,8 @@ def subir_foto(request):
                 reverse=True
             )
 
-            photo_url = f"{settings.MEDIA_URL}UserFiles/temp/{image_files[0]}" if image_files else None
-            audio_url = f"{settings.MEDIA_URL}UserFiles/temp/{audio_files[0]}" if audio_files else None
+            photo_url = f"{settings.MEDIA_URL}UserFiles/{username}/{image_files[0]}" if image_files else None
+            audio_url = f"{settings.MEDIA_URL}UserFiles/{username}/{audio_files[0]}" if audio_files else None
 
             if photo_url and not audio_url:
                 mensaje = "No se encontró texto en la imagen anterior."
@@ -263,7 +303,6 @@ def subir_foto(request):
             'contenido': None,
             'mensaje': mensaje
         })
-
 
 @csrf_exempt
 def modify_json(request):

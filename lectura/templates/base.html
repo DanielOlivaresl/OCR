@@ -76,6 +76,27 @@
             background-color: #1A1A2E; /* Morado oscuro */
             color: #E94560; /* Texto rojo */
         }
+        .btn-custom, .file-btn, .back-button {
+    background-color: #E94560;  /* Rojo vibrante */
+    color: #EAEAEA;             /* Texto claro */
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    margin: 5px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-custom:hover,
+.file-btn:hover,
+.back-button:hover {
+    background-color: #1A1A2E;  /* Morado oscuro */
+    color: #E94560;             /* Rojo */
+}
+
     </style>
 </head>
 <body>
@@ -108,5 +129,78 @@
             document.getElementById('loading').style.display = 'none';
         }
     </script>
+    <script>
+    window.viewUserFiles = function(username){
+        const content = document.getElementById('content');
+
+        fetch(`/get-user-files/${username}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const files = data.files;
+                    let fileListHtml = files.map(file => 
+                        `<li><button class="file-btn" onclick="viewFile('${username}', '${file}')">${file}</button></li>`
+                    ).join('');
+
+                    content.innerHTML = `
+                        <div id="fileViewer">
+                            <h3>Archivos Disponibles para <span style="color:#2A9D8F">${username}</span></h3>
+                            <ul class="file-list">${fileListHtml}</ul>
+                        </div>
+
+                        <input type="file" id="fileInput" name="file" style="display: none;" onchange="handleFileUpload(event)">
+                        
+                        <div class="action-buttons">
+                            <button class="btn-custom" type="button" onclick="uploadDocument()">Subir Documento</button>
+                            <button class="btn-custom btn-photo" type="button" onclick="takePhoto()">Tomar Foto</button>
+                        </div>
+                    `;
+                } else {
+                    content.innerHTML = `<p>Error: ${data.message}</p>`;
+                }
+            })
+            .catch(err => {
+                content.innerHTML = `<p>Error al obtener archivos: ${err.message}</p>`;
+            });
+    };
+
+    function viewFile(username, filename) {
+        const content = document.getElementById('content');
+        const fileUrl = `/userFiles/UserFiles/${username}/${filename}`;
+        const fileExt = filename.split('.').pop().toLowerCase();
+
+        let fileViewerHtml = `
+            <h3>Viendo archivo: <span style="color:#2A9D8F">${filename}</span></h3>
+            <div class="file-display" style="margin-top: 20px;">`;
+
+        if (fileExt === 'png' || fileExt === 'jpg' || fileExt === 'jpeg') {
+            fileViewerHtml += `<img src="${fileUrl}" alt="${filename}" style="max-width:100%; height:auto;">`;
+        } else if (fileExt === 'mp3') {
+            fileViewerHtml += `
+                <audio controls>
+                    <source src="${fileUrl}" type="audio/mpeg">
+                    Tu navegador no soporta la reproducción de audio.
+                </audio>`;
+        } else if (fileExt === 'docx') {
+            fileViewerHtml += `
+                <p>No se puede mostrar el archivo .docx directamente aquí.</p>
+                <a href="${fileUrl}" download class="btn-custom" style="margin-top: 15px;">Descargar Documento</a>`;
+        } else if(fileExt === 'pdf') {
+            fileViewerHtml += `
+            <iframe src="${fileUrl}" width="100%" height="600px" style="border: none;">
+                Este navegador no puede mostrar archivos PDF.
+            </iframe>`;
+        } else {
+            fileViewerHtml += `<p>Tipo de archivo no compatible para vista previa.</p>`;
+        }
+
+        fileViewerHtml += `</div>
+            <br>
+            <button class="btn-custom" onclick="window.viewUserFiles('${username}')">Volver</button>`;
+
+        content.innerHTML = fileViewerHtml;
+    }
+</script>
+
 </body>
 </html>

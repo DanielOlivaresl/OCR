@@ -143,6 +143,19 @@
     {% endif %}
 
     <!-- Botón de Volver al Inicio -->
-    <a href="/" class="back-button">Volver al inicio</a>
+<button class="back-button" onclick="volver()">Volver</button>
+
+<script>
+    function volver() {
+        const username = localStorage.getItem("username");
+        if (username) {
+            localStorage.setItem("reload", "true");
+            window.location.href = "/";
+        } else {
+            window.location.href = "/";
+        }
+    }
+</script>
+
 </div>
 {% endblock %}

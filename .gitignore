@@ -22,3 +22,4 @@ venv/
 *.swp
 .idea/
 .vscode/
+userFiles/
