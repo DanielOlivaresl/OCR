@@ -187,7 +187,7 @@ def cargar_archivo(request):
         audio_url = None
         if contenido and contenido.strip() != "" and not mensaje:
             audio_path = os.path.join(user_folder, f"{os.path.splitext(archivo.name)[0]}.mp3")
-            texto_a_audio(contenido, audio_path)
+            texto_a_audio(contenido, audio_path)#even_labs_tts(contenido,audio_path)#
             audio_url = os.path.join(settings.MEDIA_URL, 'UserFiles', username, f"{os.path.splitext(archivo.name)[0]}.mp3")
         elif not mensaje:
             mensaje = "No se encontró texto en el documento."
