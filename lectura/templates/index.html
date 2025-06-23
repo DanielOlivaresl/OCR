@@ -442,9 +442,14 @@ function handleLogin(event) {
     </form>
 
 
-    <button class="btn-custom" type="button" onclick="start()">Comenzar</button>
+    <button class="btn-custom" type="button" onclick="startAsTemp()">Comenzar</button>
 </div>
 <script>
+function startAsTemp() {
+    localStorage.setItem("username", "temp");
+    localStorage.setItem("reload", "true");
+    window.location.href = "/?username=temp";  // este parámetro activa la limpieza
+}
 document.addEventListener("DOMContentLoaded", function () {
     const username = localStorage.getItem("username");
     const shouldReload = localStorage.getItem("reload");

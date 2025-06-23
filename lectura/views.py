@@ -7,7 +7,7 @@ from django.core.files.storage import FileSystemStorage
 from PyPDF2 import PdfReader  # Para extraer texto de PDFs
 # import pdfplumber  # Para una extracción más precisa
 from docx import Document  # Para manejar archivos .docx
-
+import shutil  # ya debería estar importado arriba, si no, añádelo
 from gtts import gTTS   
 
 from elevenlabs.client import ElevenLabs
@@ -21,6 +21,13 @@ import requests
 
 # Carpeta base unificada
 USER_FILES_DIR = os.path.join(settings.MEDIA_ROOT, 'UserFiles')
+
+
+def limpiar_carpeta_temp():
+    temp_folder = os.path.join(USER_FILES_DIR, "temp")
+    if os.path.exists(temp_folder):
+        shutil.rmtree(temp_folder)  # borra la carpeta entera
+        os.makedirs(temp_folder)    # la vuelve a crear vacía
 
 def read_image_with_ocrspace(file_path, api_key="helloworld", language="spa"):
     """
@@ -129,7 +136,10 @@ def read_docx(file_path):
 
 
 def bienvenida(request):
-    return render(request, 'index.html')        
+    username = request.GET.get("username")
+    if username == "temp":
+        limpiar_carpeta_temp()
+    return render(request, 'index.html')
 
 
 def cargar_archivo(request):
